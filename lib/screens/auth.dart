@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 final _firebase = FirebaseAuth.instance;
 
@@ -65,6 +67,70 @@ class _AuthScreenState extends State<AuthScreen> {
       setState(() {
         _isAuthenticating = false;
       });
+    }
+  }
+
+  Future<User?> _signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        return null;
+      }
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken, idToken: googleAuth.idToken);
+      final UserCredential authResult =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      final User? user = authResult.user;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'username': user.displayName,
+          'email': user.email,
+          'image_url': user.photoURL
+        });
+      }
+      return user;
+    } catch (e) {
+      print("Error signing in with Google: $e");
+      return null;
+    }
+  }
+
+  Future<User?> _signInWithFacebook() async {
+    try {
+      final LoginResult loginResult = await FacebookAuth.instance.login();
+      if (loginResult.status == LoginStatus.success) {
+        final AuthCredential credential =
+            FacebookAuthProvider.credential(loginResult.accessToken!.token);
+        final UserCredential authResult =
+            await FirebaseAuth.instance.signInWithCredential(credential);
+        final User? user = authResult.user;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+            'username': user.displayName,
+            'email': user.email,
+            'image_url': user.photoURL
+          });
+        }
+        return user;
+      } else if (loginResult.status == LoginStatus.cancelled) {
+        return null;
+      } else {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error Signing in with Facebook:')));
+        return null;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error Signing in with Facebook: $e')));
+      print('Error Signing in with Facebook: $e');
+      return null;
     }
   }
 
@@ -176,7 +242,47 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                 ),
-              )
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton(
+                      style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.all(Colors.white),
+                          shape: MaterialStateProperty.all(
+                              const CircleBorder(side: BorderSide(width: 40)))),
+                      onPressed: () async {
+                        User? user = await _signInWithGoogle();
+                        if (user != null) {}
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.fromLTRB(0, 10, 0, 10),
+                        child: Image(
+                          image: AssetImage('assets/images/google.png'),
+                          height: 35.0,
+                        ),
+                      )),
+                  OutlinedButton(
+                      style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.all(Colors.white),
+                          shape: MaterialStateProperty.all(
+                              const CircleBorder(side: BorderSide(width: 40)))),
+                      onPressed: () async {
+                        User? user = await _signInWithFacebook();
+                        if (user != null) {}
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.fromLTRB(0, 10, 0, 10),
+                        child: Image(
+                          image: AssetImage('assets/images/facebook.png'),
+                          height: 35.0,
+                        ),
+                      ))
+                ],
+              ),
             ],
           ),
         ),

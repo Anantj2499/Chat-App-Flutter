@@ -65,6 +65,8 @@ class DefaultFirebaseOptions {
     projectId: 'chat-app-flutter-8521f',
     databaseURL: 'https://chat-app-flutter-8521f-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'chat-app-flutter-8521f.appspot.com',
+    androidClientId: '33658787534-cliehi53otn2676ktnfdakq45ru45r63.apps.googleusercontent.com',
+    iosClientId: '33658787534-ke5m3pf3q1n1618elr82gguua5di719m.apps.googleusercontent.com',
     iosBundleId: 'com.example.chatApp',
   );
 }
